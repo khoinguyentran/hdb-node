@@ -64,7 +64,7 @@ set(openssl_LIBRARIES crypto)
 
 # jsoncpp
 set(jsoncpp_INCLUDE_DIR ${LIBREPO}/jsoncpp-src-0.5.0/include)
-set(jsoncpp_LIBRARY_DIR ${LIBREPO}/jsoncpp-src-0.5.0/libs/linux-gcc-4.2.1)
-set(jsoncpp_LIBRARIES json_linux-gcc-4.2.1_libmt)
+set(jsoncpp_LIBRARY_DIR ${LIBREPO}/jsoncpp-src-0.5.0/libs/linux-gcc-4.8)
+set(jsoncpp_LIBRARIES json_linux-gcc-4.8_libmt)
 
 add_subdirectory(src)
