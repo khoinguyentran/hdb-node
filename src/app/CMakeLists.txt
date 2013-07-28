@@ -34,7 +34,7 @@ add_definitions(-DBOOST_NO_CXX11_SCOPED_ENUMS)
 
 add_executable(app ${APP_SRCS})
 target_link_libraries(app
-    pthread GL
+    pthread GL rt
     ${Boost_LIBRARIES} ${glog_LIBRARIES} ${cURL_LIBRARIES}
     ${sqlite_LIBRARIES} ${jsoncpp_LIBRARIES} ${qpport_LIBRARIES})
 
