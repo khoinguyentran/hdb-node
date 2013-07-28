@@ -1,4 +1,3 @@
-#!/usr/local/bin/bash 
 # Author : Hemanth.HM
 # Email : hemanth[dot]hm[at]gmail[dot]com
 # License : GNU GPLv3

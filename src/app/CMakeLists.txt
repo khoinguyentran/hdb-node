@@ -39,7 +39,7 @@ target_link_libraries(app
     ${sqlite_LIBRARIES} ${jsoncpp_LIBRARIES} ${qpport_LIBRARIES})
 
 add_custom_command(TARGET app POST_BUILD
-    COMMAND ${CMAKE_SOURCE_DIR}/script/cpld.sh
+    COMMAND bash ${CMAKE_SOURCE_DIR}/script/cpld.sh
         ${CMAKE_CURRENT_BINARY_DIR}/app
         ${CMAKE_INSTALL_PREFIX}/${PACKAGE_VERSION}/${OS_VERSION}/node/app)
 

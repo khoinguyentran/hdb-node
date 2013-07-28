@@ -42,7 +42,7 @@ target_link_libraries(controller
     ${jsoncpp_LIBRARIES} ${qpport_LIBRARIES})
     
 add_custom_command(TARGET controller POST_BUILD
-    COMMAND ${CMAKE_SOURCE_DIR}/script/cpld.sh
+    COMMAND bash ${CMAKE_SOURCE_DIR}/script/cpld.sh
         ${CMAKE_CURRENT_BINARY_DIR}/controller
         ${CMAKE_INSTALL_PREFIX}/${PACKAGE_VERSION}/${OS_VERSION}/node)
 
