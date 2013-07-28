@@ -1,0 +1,6 @@
+[login]
+username=admin
+password=admin
+
+[camera]
+url=http://10.10.201.156/video.cgi?resolution=vga

@@ -1,0 +1,7 @@
+#ifndef VERSION_HPP
+#define VERSION_HPP
+
+#define OS_VERSION "@OS_VERSION@"
+#define PACKAGE_VERSION "@PACKAGE_VERSION@"
+
+#endif

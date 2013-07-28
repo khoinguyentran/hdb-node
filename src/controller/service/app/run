@@ -1,0 +1,3 @@
+#!/bin/sh
+echo "Starting app..."
+exec ping -c 8 google.com
