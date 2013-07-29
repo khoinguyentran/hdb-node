@@ -1,3 +1,4 @@
 #!/bin/sh
 echo "Starting controller..."
-exec ping -c 8 google.com
+cd ../../
+LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH exec ./controller

@@ -50,6 +50,10 @@ install(TARGETS controller
         DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/node)
 install(DIRECTORY assets data
         DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/node)
+install(PROGRAMS service/controller/run
+        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/node/service/controller)
+install(PROGRAMS service/app/run
+        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/node/service/app)
 install(FILES controller.conf controller.conf.local
         DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/node)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/VERSION

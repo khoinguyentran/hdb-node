@@ -7,7 +7,7 @@ message("CPU: ${CMAKE_SYSTEM_PROCESSOR}")
 
 # Version
 if("$ENV{PACKAGE_VERSION}" STREQUAL "")
-    set(PACKAGE_VERSION 0)
+    set(PACKAGE_VERSION 1.0)
 else()
     set(PACKAGE_VERSION $ENV{PACKAGE_VERSION})
 endif()

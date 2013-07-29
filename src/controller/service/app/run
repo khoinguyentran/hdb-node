@@ -1,3 +1,5 @@
 #!/bin/sh
 echo "Starting app..."
-exec ping -c 8 google.com
+echo "Change working directory to "
+cd ../../app
+LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH exec ./app
