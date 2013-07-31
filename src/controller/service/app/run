@@ -1,5 +1,7 @@
 #!/bin/sh
 echo "Starting app..."
+echo "Killing zombie services..."
+killall vca
 echo "Change working directory to "
 cd ../../app
 LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH exec ./app

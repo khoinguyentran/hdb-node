@@ -27,7 +27,11 @@ endif()
 # qp state machine framework
 set(qpcpp_ROOT_DIR ${LIBREPO}/qpcpp-4.5.04)
 set(qpport_INCLUDE_DIR ${qpcpp_ROOT_DIR}/ports/posix/gnu)
-set(qpport_LIBRARY_DIR ${qpcpp_ROOT_DIR}/ports/posix/gnu/rel)
+if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")        
+    set(qpport_LIBRARY_DIR ${qpcpp_ROOT_DIR}/ports/posix/gnu/dbg)
+else()
+    set(qpport_LIBRARY_DIR ${qpcpp_ROOT_DIR}/ports/posix/gnu/rel)
+endif()
 set(qpport_LIBRARIES qp)
 set(qpcpp_INCLUDE_DIR ${qpcpp_ROOT_DIR}/include)
 
@@ -66,5 +70,8 @@ set(openssl_LIBRARIES crypto)
 set(jsoncpp_INCLUDE_DIR ${LIBREPO}/jsoncpp-src-0.5.0/include)
 set(jsoncpp_LIBRARY_DIR ${LIBREPO}/jsoncpp-src-0.5.0/libs/linux-gcc-4.8)
 set(jsoncpp_LIBRARIES json_linux-gcc-4.8_libmt)
+
+# pstream
+set(pstream_INCLUDE_DIR ${LIBREPO}/pstreams-0.8.0)
 
 add_subdirectory(src)

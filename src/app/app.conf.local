@@ -2,5 +2,12 @@
 username=admin
 password=admin
 
-[camera]
-url=http://10.10.201.156/video.cgi?resolution=vga
+[vca-0]
+name=office
+input=http://10.10.201.155/video.cgi?resolution=vga
+params=-resize 320,240 -mask fg=0.2,img=vca/LOITERING1231-mask.jpg,t=5 -t -thmax 1 -phi 5 -R 5 -ppopsigma 5 -ppopthresh 0 -ppopksize 5 -ppopopen 3 -ppopotsu 1
+
+[vca-1]
+name=front-door
+input=http://10.10.201.241/video.cgi?resolution=vga
+params=-cf -nomotiondetection

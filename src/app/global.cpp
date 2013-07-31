@@ -69,7 +69,8 @@ static QP::QEvt const** default_controller_equeue;
 static QP::QEvt const** default_uploader_equeue;
 static QP::QEvt const** default_vca_manager_equeue;
 
-static QP::QEvt* small_pool;
+typedef QF_MPOOL_EL ( app::gevt ) evt_block;
+static evt_block* small_pool;
 
 QP::QActive* get_default_controller() { return default_controller; }
 QP::QActive* get_default_uploader() { return default_uploader; }
@@ -95,8 +96,9 @@ void qp_init()
 
     /* Initialize event pools */
     size_t small_pool_size = global::config()->get("qp.small_pool_size", 100);
-    small_pool = new app::gevt[small_pool_size];
-    QP::QF::poolInit(small_pool, small_pool_size, sizeof(app::gevt));
+    
+    small_pool = ( evt_block * )malloc ( sizeof ( evt_block ) * small_pool_size );
+    QP::QF::poolInit(small_pool, small_pool_size, sizeof ( evt_block ));
 
     /* Create components */
     default_controller = app::create_controller();
@@ -105,13 +107,13 @@ void qp_init()
 
     /* Start components */
     default_controller->start(
-        3, default_controller_equeue, controller_equeue_size,
+        1, default_controller_equeue, controller_equeue_size,
         (void *)0, 1024, (QP::QEvt*)0);
     default_uploader->start(
         2, default_uploader_equeue, uploader_equeue_size,
         (void *)0, 1024, (QP::QEvt*)0);
     default_vca_manager->start(
-        1, default_vca_manager_equeue, vca_manager_equeue_size,
+        3, default_vca_manager_equeue, vca_manager_equeue_size,
         (void *)0, 1024, (QP::QEvt*)0);
 }
 
@@ -136,10 +138,10 @@ void init_database()
     }
     
     error = sqlite3_exec(sql,
-                         "CREATE TABLE IF NOT EXISTS vca_events \
+                         "CREATE TABLE IF NOT EXISTS events \
                          (id INTEGER PRIMARY KEY, \
                          timestamp DATETIME NOT NULL, \
-                         description TEXT NOT NULL, \         
+                         description TEXT NOT NULL, \
                          snapshot_path TEXT, \
                          uploaded INTEGER)",
                          0, 0, 0);

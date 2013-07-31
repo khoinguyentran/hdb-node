@@ -233,6 +233,7 @@ downloader::login_callback(void* ptr, size_t size, size_t nmemb, void* userdata)
             LOG(INFO) << "Session = " << what[1];
             auto evt = Q_NEW(gevt, EVT_LOGGED_IN);
             me->postFIFO(evt);
+            me->reply_finished_ = true;
         }
     }
 

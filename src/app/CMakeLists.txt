@@ -15,6 +15,7 @@ link_directories(${rocket_LIBRARY_DIR})
 include_directories(${qpcpp_INCLUDE_DIR})
 include_directories(${qpport_INCLUDE_DIR})
 link_directories(${qpport_LIBRARY_DIR})
+include_directories(${pstream_INCLUDE_DIR})
 
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/version.hpp.in
@@ -29,6 +30,7 @@ set(APP_SRCS main.cpp global.cpp bsp.cpp ../common/common.cpp
 
 add_definitions(-std=c++11)
 add_definitions(-DQ_EVT_VIRTUAL)
+add_definitions(-DQ_EVT_CTOR)
 add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED)
 add_definitions(-DBOOST_NO_CXX11_SCOPED_ENUMS)
 
@@ -49,7 +51,7 @@ install(FILES app.conf app.conf.local
         DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/node/app)
 install(DIRECTORY snapshots
         DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/node/app)
-install(DIRECTORY vca
+install(DIRECTORY bin/${OS_VERSION}/vca
         DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/node/app)
-install(PROGRAMS vca/vca
+install(PROGRAMS bin/${OS_VERSION}/vca/vca
         DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/node/app/vca)

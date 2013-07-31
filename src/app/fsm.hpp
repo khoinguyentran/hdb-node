@@ -8,6 +8,8 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/property_tree/ptree.hpp>
 
+#include <iostream>
+
 namespace app
 {
 using boost::shared_ptr;
@@ -50,6 +52,7 @@ enum signal
     // VCA Manager events
     EVT_GENERATE_VCA_EVENT,
     EVT_VCA_EVENT,
+    EVT_VCA_STOPPED,
     
     // Common events.
     EVT_TIMEOUT
@@ -58,7 +61,8 @@ enum signal
 // Event prototypes.
 class gevt : public QP::QEvt
 {
-public:
+public:    
+    gevt ( QP::QSignal const s ) : QP::QEvt ( s ) {}
     ptree args;
     virtual ~gevt() { args.clear(); }
 };
