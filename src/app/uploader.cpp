@@ -115,8 +115,8 @@ QP::QState uploader::idle ( uploader* const me, QP::QEvt const* const e )
     {
         auto remind_interval = SECONDS (
             global::config()->get ( "upload.remind_interval", 1 ) );   
-        me->vca_event_upload_reminder_.postIn ( me, remind_interval );
-        me->event_upload_reminder_.postIn ( me, remind_interval );
+        me->vca_event_upload_reminder_.postEvery ( me, remind_interval );
+        me->event_upload_reminder_.postEvery ( me, remind_interval );
         status = Q_HANDLED();
         break;
     }
