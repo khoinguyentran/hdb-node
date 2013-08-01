@@ -125,7 +125,7 @@ controller::listen_for_command()
             acceptor.accept(controll_socket_);
             while (true)
             {
-                asio::read_until(controll_socket_, buffer, regex("\r\n"), error);
+                asio::read_until(controll_socket_, buffer, regex("\n"), error);
                 if (error)
                     break;
                 

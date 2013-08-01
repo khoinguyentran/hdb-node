@@ -43,15 +43,15 @@ target_link_libraries(app
 add_custom_command(TARGET app POST_BUILD
     COMMAND bash ${CMAKE_SOURCE_DIR}/script/cpld.sh
         ${CMAKE_CURRENT_BINARY_DIR}/app
-        ${CMAKE_INSTALL_PREFIX}/${PACKAGE_VERSION}/${OS_VERSION}/node/app)
+        ${CMAKE_INSTALL_PREFIX}/${PACKAGE_VERSION}/${OS_VERSION}/app)
 
 install(TARGETS app
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/node/app)
+        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/app)
 install(FILES app.conf app.conf.local
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/node/app)
+        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/app)
 install(DIRECTORY snapshots
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/node/app)
+        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/app)
 install(DIRECTORY bin/${OS_VERSION}/vca
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/node/app)
+        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/app)
 install(PROGRAMS bin/${OS_VERSION}/vca/vca
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/node/app/vca)
+        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/app/vca)

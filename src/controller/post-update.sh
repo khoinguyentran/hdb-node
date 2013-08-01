@@ -1,5 +1,5 @@
 #!/bin/sh
 echo "Running post-update..."
 
-# Resume supervising nodeapp
-svc -u ~/services/nodeapp
+# Resume supervising eapp
+svc -u service/app

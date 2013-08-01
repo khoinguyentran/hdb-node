@@ -30,6 +30,7 @@ set(CONTROLLER_SRCS main.cpp
     controller.cpp downloader.cpp)
     
 add_definitions(-std=c++11)
+add_definitions(-DQ_EVT_CTOR)
 add_definitions(-DQ_EVT_VIRTUAL)
 add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED)
 add_definitions(-DBOOST_NO_CXX11_SCOPED_ENUMS)
@@ -44,19 +45,19 @@ target_link_libraries(controller
 add_custom_command(TARGET controller POST_BUILD
     COMMAND bash ${CMAKE_SOURCE_DIR}/script/cpld.sh
         ${CMAKE_CURRENT_BINARY_DIR}/controller
-        ${CMAKE_INSTALL_PREFIX}/${PACKAGE_VERSION}/${OS_VERSION}/node)
+        ${CMAKE_INSTALL_PREFIX}/${PACKAGE_VERSION}/${OS_VERSION})
 
 install(TARGETS controller
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/node)
+        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION})
 install(DIRECTORY assets data
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/node)
+        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION})
 install(PROGRAMS service/controller/run
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/node/service/controller)
+        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/service/controller)
 install(PROGRAMS service/app/run
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/node/service/app)
+        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/service/app)
 install(FILES controller.conf controller.conf.local
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/node)
+        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/VERSION
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/node)
+        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION})
 install(PROGRAMS pre-update.sh post-update.sh        
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/node)
+        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION})

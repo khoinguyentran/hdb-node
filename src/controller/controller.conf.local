@@ -1,6 +1,13 @@
 [login]
+url=http://localhost:9001/login
 username=admin
 password=admin
 
+[update]
+url=http://localhost:9001/softwareupdate/checkforupdate
+
 [node]
 id=HDBIP01
+
+[download]
+url=http://localhost:9001/softwareupdate/getfile

@@ -46,9 +46,10 @@ enum signal
 // Event prototypes.
 class gevt : public QP::QEvt
 {
-public:
+public:    
+    gevt ( QP::QSignal const s ) : QP::QEvt ( s ) {}
     ptree args;
-    ~gevt() { args.clear(); }
+    virtual ~gevt() { args.clear(); }
 };
 
 // Component creation functions.

@@ -1,5 +1,5 @@
 #!/bin/sh
 echo "Running pre-update..."
 
-# Stop respawning nodeapp
-svc -d ~/services/nodeapp
+# Stop respawning app
+svc -d service/app

@@ -2,6 +2,7 @@
 #include "common.hpp"
 #include "global.hpp"
 
+#include <curl/curl.h>
 #include <qp_port.h>
 #include <glog/logging.h>
 #include <pstream.h>
@@ -9,12 +10,14 @@
 #include <boost/chrono.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/posix_time/posix_time_io.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/thread.hpp>
 
 #include <algorithm>
+#include <fstream>
 #include <string>
 #include <sstream>
 #include <vector>
@@ -22,10 +25,12 @@
 namespace app
 {
 
+using namespace boost::filesystem;
 using boost::posix_time::ptime;
 using boost::posix_time::microsec_clock;
 using boost::shared_ptr;
 using boost::make_shared;
+using std::ofstream;
 using std::ostringstream;
 using std::string;
 using std::vector;
@@ -52,6 +57,8 @@ public:
     void handle_vca ( shared_ptr< vca_info > );
     void start_vca ( shared_ptr< vca_info > );
     void populate_vca_list();
+    void get_snapshot ( string const &, path const & );
+    static size_t get_snapshot_callback ( void *, size_t, size_t, void * );
 
 private:
     vector< shared_ptr< vca_info > > vca_list_;
@@ -175,8 +182,11 @@ void vca_manager::log_vca_event ( gevt const * const e )
 void vca_manager::handle_vca ( shared_ptr< vca_info > info )
 {
     ostringstream cmdline;
+    uint16_t httpport = global::config()->get(info->name + ".httpport", 4001);
     cmdline << "vca/vca -i " << info->input
-            << " " << info->params;
+            << " " << info->params
+            << " --httpport " << httpport;
+            
     LOG ( INFO ) << info->name << ": " << cmdline.str();
     redi::ipstream in ( cmdline.str() );
     string line;
@@ -186,7 +196,17 @@ void vca_manager::handle_vca ( shared_ptr< vca_info > info )
         evt->args.put ( "description", line );
         ptime timestamp ( microsec_clock::universal_time() );
         evt->args.put ( "timestamp", common::get_utc_string ( timestamp ) );
-        evt->args.put ( "snapshot_path", "snapshots/vca.jpg" );        
+
+        path local_folder ( global::config()->get ( "vca.snapshot_dir", "snapshots" ) );
+        path local_file ( info->name + " " + common::get_utc_string ( timestamp ) + ".jpg" );
+        path absolute=operator/ ( local_folder, local_file );
+        evt->args.put ( "snapshot_path", absolute.string() );
+
+        ostringstream url;
+        url << "http://localhost:" << httpport << "/frame.jpg";
+
+        get_snapshot ( url.str(), absolute );
+
         this->postFIFO ( evt );
     }
     
@@ -219,6 +239,33 @@ void vca_manager::populate_vca_list()
             this->vca_list_.push_back ( info );            
         }
     }
+}
+
+void
+vca_manager::get_snapshot ( string const& url, path const& local_path )
+{
+    ofstream* ofs = new ofstream ( local_path.string(), ofstream::binary | ofstream::trunc );
+    auto curl = curl_easy_init();
+    CURLcode curl_error;
+    
+    if ( ofs != NULL && curl != NULL )
+    {
+        curl_easy_setopt ( curl, CURLOPT_URL, url.c_str() );
+        curl_easy_setopt ( curl, CURLOPT_WRITEFUNCTION, &vca_manager::get_snapshot_callback );
+        curl_easy_setopt ( curl, CURLOPT_WRITEDATA, ofs );
+        curl_error = curl_easy_perform ( curl );
+        curl_easy_cleanup ( curl );
+        ofs->close();
+    }
+}
+
+size_t
+vca_manager::get_snapshot_callback ( void* ptr, size_t size, size_t nmemb, void* userdata )
+{
+    auto realsize = size * nmemb;
+    auto ofs = ( ofstream* ) userdata;
+    ofs->write ( ( const char* ) ptr, realsize );
+    return realsize;
 }
 
 QP::QActive* create_vca_manager()

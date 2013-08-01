@@ -404,7 +404,7 @@ void controller::resume_update_commands()
     
     smatch what;
     line = this->cmds_.front();
-    if (regex_match(line, what, regex("^(version) ([[:digit:]]+)$")))
+    if (regex_match(line, what, regex("^(version) \"([^\"]+)\"$")))
         this->new_version_ = what[2];
     else
         throw "Version is missing from update commands.";
@@ -427,12 +427,14 @@ void controller::populate_update_commands(string const& manifest)
     string::const_iterator end;
     boost::regex add_re("^(Add|AddExecutable|Update|UpdateExecutable) \"([^\"]+)\" ([[:alnum:]]+)");
     boost::regex delete_re("^(Delete) \"([^\"]+)\"");
-    boost::regex version_re("^(Version) ([[:digit:]]+)");
+    boost::regex version_re("^(Version) \"([^\"]+)\"");
     boost::regex end_re("^(end)");
     
     string controller_name(global::config()->get< string >("info.module_name"));
     start = manifest.begin();
     end = manifest.end();
+
+    this->cmds_ = queue< string >();
     
     // Parse version identifier.
     regex_search(start, end, what, version_re, flags);    
@@ -461,16 +463,17 @@ void controller::populate_update_commands(string const& manifest)
         }
         if (command.find("Add") != string::npos)
         {
+            get_files.push_back(tuple< string, string > (filepath, checksum));
             copy_files.push_back(filepath);
         }
         if (command.find("Update") == 0)
         {
             path p(filepath);
-            if ((*p.begin()).string().compare(global::config()->get<string>("update.package_dir")) != 0)            
+            if ((*p.begin()).string().compare(global::config()->get<string>("update.app_dir")) != 0)            
             {
                 path p_old("");
                 auto it = p.begin();
-                it++;
+                
                 while (it != p.end())
                 {
                     p_old /= *it;
@@ -526,7 +529,7 @@ void controller::populate_update_commands(string const& manifest)
     
     // Write update command file.
     ofstream cmd_file(cmd_file_path_.string());
-    cmd_file << "version " << this->new_version_ << endl;
+    cmd_file << "version \"" << this->new_version_ << "\"" << endl;
     
     // Files to download.
     
@@ -535,8 +538,8 @@ void controller::populate_update_commands(string const& manifest)
     
     // Files to checksum.
     for (int i = 0; i < get_files.size(); ++i)
-        cmd_file << "check \"" << get_files[i].get<0>() << "\" "
-            << get_files[i].get<1>() << endl;
+        cmd_file << "check \"" << get_files[i].get<0>() << "\" \""
+            << get_files[i].get<1>() << "\"" << endl;
             
     // Update commands.
     path src, dest;
@@ -600,7 +603,7 @@ controller::execute_command(string const& cmd)
     
     smatch what;
     boost::regex get_re("^(get) \"([^\"]+)\"$");          
-    boost::regex check_re("^(check) \"([^\"]+)\" ([[:alnum:]]+)$");
+    boost::regex check_re("^(check) \"([^\"]+)\" \"([^\"]+)\"$");
     boost::regex set_exec_re("^(set_exec) \"([^\"]+)\"$");
     boost::regex exec_re("^(exec) \"([^\"]+)\"$");
     boost::regex rename_re("^(rename) \"([^\"]+)\" \"([^\"]+)\"$");
@@ -691,7 +694,7 @@ controller::execute_command(string const& cmd)
     }
     else if (cmd.find("shutdown_main") == 0)
     {
-        shared_ptr< string > request(new string("stop\n"));
+        shared_ptr< string > request(new string("shutdown\n"));
         worker_thread_ = boost::thread(
             boost::bind(&controller::app_communicate, this, request));
     }
@@ -732,7 +735,7 @@ void controller::app_communicate(shared_ptr< string > request)
         string line;
         std::getline(is, line);
 
-        if (line.find("stopped") == 0)
+        if (line.find("done") == 0)
         {
             auto evt = Q_NEW(gevt, EVT_COMMAND_EXECUTED);
             this->postFIFO(evt);

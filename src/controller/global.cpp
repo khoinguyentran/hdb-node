@@ -67,7 +67,8 @@ static QP::QActive* default_downloader;
 static QP::QEvt const** default_controller_equeue;
 static QP::QEvt const** default_downloader_equeue;
 
-static QP::QEvt* small_pool;
+typedef QF_MPOOL_EL ( controller::gevt ) evt_block;
+static evt_block* small_pool;
 
 QP::QActive* get_default_controller() {
     return default_controller;
@@ -92,8 +93,9 @@ void qp_init()
 
     /* Initialize event pools */
     size_t small_pool_size = global::config()->get("qp.small_pool_size", 100);
-    small_pool = new controller::gevt[small_pool_size];
-    QP::QF::poolInit(small_pool, small_pool_size, sizeof(controller::gevt));
+    
+    small_pool = ( evt_block * )malloc ( sizeof ( evt_block ) * small_pool_size );
+    QP::QF::poolInit(small_pool, small_pool_size, sizeof ( evt_block ));
 
     /* Create components */
     default_controller = controller::create_controller();

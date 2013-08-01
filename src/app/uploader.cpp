@@ -363,6 +363,8 @@ uploader::upload_event ()
     auto timestamp = this->event_args_.get< string > ( "timestamp" );
     auto description = this->event_args_.get< string > ( "description" );
     auto snapshot_path = this->event_args_.get< string > ( "snapshot_path" );
+    auto site = global::config()->get("node.site", "invalid-site");
+    auto node_name = global::config()->get("node.name", "invalid-node-name");
 
     LOG ( INFO ) << "Uploading event " << description;
 
@@ -378,6 +380,20 @@ uploader::upload_event ()
     curl_formadd ( &formpost_, &lastptr_,
                    CURLFORM_COPYNAME, "event",
                    CURLFORM_COPYCONTENTS, description.c_str(),
+                   CURLFORM_END );
+    
+    curl_formadd ( &formpost_, &lastptr_,
+                   CURLFORM_COPYNAME, "site",
+                   CURLFORM_COPYCONTENTS, site.c_str(),
+                   CURLFORM_END );
+                   
+    curl_formadd ( &formpost_, &lastptr_,
+                    CURLFORM_COPYNAME, "nodeName",
+                    CURLFORM_COPYCONTENTS, node_name.c_str(),
+                    CURLFORM_END );
+    curl_formadd ( &formpost_, &lastptr_,
+                   CURLFORM_COPYNAME, "timestamp",
+                   CURLFORM_COPYCONTENTS, timestamp.c_str(),
                    CURLFORM_END );
 
     curl_easy_setopt ( this->curl_, CURLOPT_URL,
