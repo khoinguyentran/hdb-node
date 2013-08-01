@@ -142,8 +142,12 @@ downloader::fetch_manifest(downloader * const me, QP::QEvt const * const e)
         status = Q_TRAN(&downloader::active);
         break;
     case EVT_LOGIN_FAILED:
-        status = Q_TRAN(&downloader::active);
+    {
+        auto evt = Q_NEW ( gevt, EVT_MANIFEST_UNAVAILABLE );
+        me->controller_->postFIFO ( evt );
+        status = Q_TRAN(&downloader::active);    
         break;        
+    }
     default:
         status = Q_SUPER(&downloader::active);
         break;

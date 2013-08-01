@@ -163,9 +163,6 @@ QP::QState controller::recovery(controller * const me, QP::QEvt const * const e)
         me->resume_update_commands();
         status = Q_TRAN(&controller::execute_update_commands);
         break;    
-    case EVT_CHECK_FOR_UPDATE:
-        status = Q_TRAN(&controller::check_for_update);
-        break;        
     default:
         status = Q_SUPER(&controller::active);
         break;
@@ -213,6 +210,17 @@ QP::QState controller::check_for_update(controller * const me, QP::QEvt const * 
         me->downloader_->postFIFO(evt);
         status = Q_HANDLED();
         break;    
+    }
+    case Q_EXIT_SIG:
+    {
+        me->update_reminder_.postIn(me, SECONDS(global::config()->get("update.interval", 10)));
+        status = Q_HANDLED();
+        break;
+    }
+    case EVT_MANIFEST_UNAVAILABLE:
+    {
+        status = Q_TRAN ( &controller::active );
+        break;
     }
     case EVT_MANIFEST_AVAILABLE:
     {
