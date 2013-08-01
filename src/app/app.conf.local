@@ -1,10 +1,10 @@
 [login]
-url=http://localhost:9001/login
+;url=http://localhost:9001/login
 username=admin
 password=admin
 
 [upload]
-url=http://localhost:9001/violation/report
+;url=http://localhost:9001/violation/report
 
 [vca-0]
 name=office
