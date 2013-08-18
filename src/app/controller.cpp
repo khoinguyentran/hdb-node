@@ -5,10 +5,15 @@
 #include <glog/logging.h>
 
 #include <boost/asio.hpp>
+#include <boost/chrono.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/date_time/posix_time/posix_time_io.hpp>
 #include <boost/regex.hpp>
 #include <boost/thread.hpp>
 
 #include <qp_port.h>
+
+#include <sstream>
 
 namespace app
 {
@@ -16,12 +21,16 @@ namespace asio = boost::asio;
 
 using asio::ip::tcp;
 using boost::regex;
+using boost::posix_time::ptime;
+using boost::posix_time::microsec_clock;
+using std::ostringstream;
 using std::string;
     
 class controller : public QP::QActive
 {
 private:
     QP::QTimeEvt timeout_;
+    QP::QTimeEvt status_report_reminder_;
     QP::QActive* uploader_;
     QP::QActive* vca_manager_;    
     
@@ -45,7 +54,8 @@ protected:
 // Constructor.
 controller::controller()
     : QActive(Q_STATE_CAST(&controller::initial)),
-      timeout_(EVT_TIMEOUT), controll_socket_(io_service_)
+      timeout_(EVT_TIMEOUT), controll_socket_(io_service_),
+      status_report_reminder_(EVT_REPORT_STATUS)
 {
 }
 
@@ -76,13 +86,42 @@ QP::QState controller::active(controller * const me, QP::QEvt const * const e)
         status = Q_HANDLED();
         break;
     }
-    case EVT_POWERED_ON:        
+    case EVT_POWERED_ON:     
+    {
+        auto remind_interval = SECONDS (
+            global::config()->get ( "report.remind_interval", 5 ) );
+        me->status_report_reminder_.postEvery ( me, remind_interval );      
+        
         status = Q_HANDLED();
         break;
+    }
     case EVT_SHUTDOWN:        
         std::terminate();
         status = Q_HANDLED();
         break;
+    case EVT_REPORT_STATUS:
+    {
+        auto sql = global::get_database_handle();
+        int error;
+        
+        ostringstream stmt;
+        ptime timestamp ( microsec_clock::universal_time() );
+        
+        stmt << "INSERT INTO events VALUES(NULL, "
+        << "'" << common::get_utc_string ( timestamp ) << "'" << ","
+        << "'" << "status" << "'" << ","
+        << "'" << "alive" << "'" << ", "
+        << "'" << "" << "'" << ", "
+        << "0" << ")";
+        
+        error = sqlite3_exec ( sql, stmt.str().c_str(), 0, 0, 0 );
+        if ( error )
+        {
+            LOG ( ERROR ) << "Could not register new event with database.";
+        }
+        status = Q_HANDLED();
+        break;
+    }
     default:
         status = Q_SUPER(&QHsm::top);
         break;

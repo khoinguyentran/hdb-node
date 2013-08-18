@@ -16,6 +16,7 @@ include_directories(${qpcpp_INCLUDE_DIR})
 include_directories(${qpport_INCLUDE_DIR})
 link_directories(${qpport_LIBRARY_DIR})
 include_directories(${pstream_INCLUDE_DIR})
+include_directories(${thrift_INCLUDE_DIR})
 
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/version.hpp.in
@@ -24,6 +25,11 @@ configure_file(
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(../common)
+
+add_subdirectory(corecomm)
+
+add_definitions(-DHAVE_NETINET_IN_H)
+add_definitions(-DHAVE_INTTYPES_H)
 
 set(APP_SRCS main.cpp global.cpp bsp.cpp ../common/common.cpp
     controller.cpp uploader.cpp vca_manager.cpp)
@@ -35,7 +41,7 @@ add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED)
 add_definitions(-DBOOST_NO_CXX11_SCOPED_ENUMS)
 
 add_executable(app ${APP_SRCS})
-target_link_libraries(app
+target_link_libraries(app corecomm
     pthread rt
     ${Boost_LIBRARIES} ${glog_LIBRARIES} ${cURL_LIBRARIES}
     ${sqlite_LIBRARIES} ${jsoncpp_LIBRARIES} ${qpport_LIBRARIES})

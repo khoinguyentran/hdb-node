@@ -1,22 +1,49 @@
 [login]
-;url=http://localhost:9001/login
+url=http://localhost:9001/login
 username=admin
 password=admin
 
 [upload]
-;url=http://localhost:9001/violation/report
+url=http://localhost:9001/violation/report
 
-[vca-0]
-name=office
-input=http://10.10.201.155/video.cgi?resolution=vga
+[report]
+url=http://localhost:9001/health/report
+
+[device-back-office]
+model=Amtk IP Camera
+host=10.10.201.155
+port=80
+username=admin
+password=
+location=Singapore
+latitude=0.0
+longitude=0.0
+
+[device-front-door]
+model=Amtk IP Camera
+port=80
+username=admin
+password=
+location=Singapore
+latitude=0.0
+longitude=0.0
+host=10.10.201.241
+
+[vca-back-office-loitering]
+analysis=loitering
+device=device-back-office
 params=-resize 320,240 -mask fg=0.2,img=vca/LOITERING1231-mask.jpg,t=5 -t -thmax 1 -phi 5 -R 5 -ppopsigma 5 -ppopthresh 0 -ppopksize 5 -ppopopen 3 -ppopotsu 1
 httpport=4001
 
-[vca-1]
-name=front-door
-input=http://10.10.201.241/video.cgi?resolution=vga
+[vca-front-door-colorfulness]
+analysis=colorfulness
+device=device-front-door
 params=-cf -nomotiondetection
 httpport=4002
+
+[core]
+device_management_host=192.168.0.100
+stream_controller_host=192.168.0.100
 
 [node]
 name=front-door-1

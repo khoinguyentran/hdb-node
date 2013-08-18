@@ -141,14 +141,15 @@ void init_database()
                          "CREATE TABLE IF NOT EXISTS events \
                          (id INTEGER PRIMARY KEY, \
                          timestamp DATETIME NOT NULL, \
+                         type TEXT NOT NULL, \
                          description TEXT NOT NULL, \
                          snapshot_path TEXT, \
                          uploaded INTEGER)",
-                         0, 0, 0);
+                         0, 0, 0);    
     if (error)
     {
         LOG(INFO) << "Could not create table events.";
-        throw "could not create table events";
+        throw "could not create table events";        
     }
 }
 

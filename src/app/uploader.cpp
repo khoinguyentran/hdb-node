@@ -24,9 +24,8 @@ using std::string;
 class uploader : public QP::QActive
 {
 private:
-    QP::QTimeEvt timeout_;
-    QP::QTimeEvt vca_event_upload_reminder_;
-    QP::QTimeEvt event_upload_reminder_;
+    QP::QTimeEvt timeout_;    
+    QP::QTimeEvt event_upload_reminder_;    
     QP::QActive* controller_;
     QP::QActive* vca_manager_;
 
@@ -53,14 +52,14 @@ protected:
     static QP::QState initial ( uploader* const, QP::QEvt const* const );
     static QP::QState active ( uploader* const, QP::QEvt const* const );
     static QP::QState idle ( uploader* const, QP::QEvt const* const );
-    static QP::QState upload_vca_event ( uploader* const, QP::QEvt const* const );
+    static QP::QState uploading_event ( uploader* const, QP::QEvt const* const );
 
 };
 
 // Constructor.
 uploader::uploader()
     : QActive ( Q_STATE_CAST ( &uploader::initial ) ),
-      timeout_ ( EVT_TIMEOUT ), vca_event_upload_reminder_ ( EVT_VCA_EVENT_UPLOAD_REMINDER ),
+      timeout_ ( EVT_TIMEOUT ),
       event_upload_reminder_ ( EVT_EVENT_UPLOAD_REMINDER )
 {
 }
@@ -114,14 +113,13 @@ QP::QState uploader::idle ( uploader* const me, QP::QEvt const* const e )
     case Q_ENTRY_SIG:
     {
         auto remind_interval = SECONDS (
-            global::config()->get ( "upload.remind_interval", 1 ) );   
-        me->vca_event_upload_reminder_.postEvery ( me, remind_interval );
+            global::config()->get ( "upload.remind_interval", 1 ) );           
         me->event_upload_reminder_.postEvery ( me, remind_interval );
         status = Q_HANDLED();
         break;
     }
     
-    case EVT_VCA_EVENT_UPLOAD_REMINDER:
+    case EVT_EVENT_UPLOAD_REMINDER:
     {
         // Check if there are yet-to-be-uploaded events in the database.
         auto sql = global::get_database_handle();
@@ -133,18 +131,26 @@ QP::QState uploader::idle ( uploader* const me, QP::QEvt const* const e )
         int retval = sqlite3_step(stmt);
         if (retval == SQLITE_ROW)
         {
-            auto evt = Q_NEW(gevt, EVT_UPLOAD_VCA_EVENT);
+            auto evt = Q_NEW(gevt, EVT_UPLOAD_EVENT);
+            evt->args.put(
+                "id",
+                string(reinterpret_cast<const char *> (sqlite3_column_text(stmt, 0)))
+            );
             evt->args.put(
                 "timestamp",
                 string(reinterpret_cast<const char *> (sqlite3_column_text(stmt, 1)))
             );
             evt->args.put(
-                "description",
+                "type",
                 string(reinterpret_cast<const char *> (sqlite3_column_text(stmt, 2)))
             );
             evt->args.put(
-                "snapshot_path",
+                "description",
                 string(reinterpret_cast<const char *> (sqlite3_column_text(stmt, 3)))
+            );
+            evt->args.put(
+                "snapshot_path",
+                string(reinterpret_cast<const char *> (sqlite3_column_text(stmt, 4)))
             );
             
             me->postFIFO(evt);            
@@ -156,22 +162,23 @@ QP::QState uploader::idle ( uploader* const me, QP::QEvt const* const e )
         break;
     }    
 
-    case EVT_UPLOAD_VCA_EVENT:
+    case EVT_UPLOAD_EVENT:
     {
         auto evt = static_cast< gevt const* const > ( e );
         LOG ( INFO ) << "Uploading event: "
+                     << evt->args.get< string > ( "id" ) << ": "
                      << evt->args.get< string > ( "timestamp" ) << ": "
+                     << evt->args.get< string > ( "type" ) << ": "
                      << evt->args.get< string > ( "description" ) << ": "
                      << evt->args.get< string > ( "snapshot_path" );
 
         me->event_args_.clear();
         me->event_args_ = evt->args;
-        status = Q_TRAN ( &uploader::upload_vca_event );
+        status = Q_TRAN ( &uploader::uploading_event );
         break;
     }
     
-    case Q_EXIT_SIG:
-        me->vca_event_upload_reminder_.disarm();
+    case Q_EXIT_SIG:        
         me->event_upload_reminder_.disarm();
         status = Q_HANDLED();
         break;
@@ -185,7 +192,7 @@ QP::QState uploader::idle ( uploader* const me, QP::QEvt const* const e )
 }
 
 // active / upload_vca_event
-QP::QState uploader::upload_vca_event ( uploader* const me, QP::QEvt const* const e )
+QP::QState uploader::uploading_event ( uploader* const me, QP::QEvt const* const e )
 {
     QP::QState status;
 
@@ -211,22 +218,21 @@ QP::QState uploader::upload_vca_event ( uploader* const me, QP::QEvt const* cons
         status = Q_TRAN ( &uploader::idle );
         break;
 
-    case EVT_VCA_EVENT_UPLOAD_FAILED:
+    case EVT_EVENT_UPLOAD_FAILED:
     {        
         status = Q_TRAN ( &uploader::idle );
         break;
     }
 
-    case EVT_VCA_EVENT_UPLOADED:
+    case EVT_EVENT_UPLOADED:
     {
         // Update event status to uploaded in database.
         auto sql = global::get_database_handle();
         ostringstream stmt;
         int error;
-        stmt << "UPDATE events set uploaded=1 where timestamp="
-        << "'" << me->event_args_.get< string > ( "timestamp" ) << "'";
-        
-        
+        stmt << "UPDATE events set uploaded=1 where id="
+        << "'" << me->event_args_.get< string > ( "id" ) << "'";
+                
         error = sqlite3_exec(sql, stmt.str().c_str(), 0, 0, 0);
         if (error)
         {
@@ -360,6 +366,7 @@ uploader::upload_event ()
 {
     uploaded_ = false;
     this->clear_reply();
+    auto type = this->event_args_.get< string > ( "type" );
     auto timestamp = this->event_args_.get< string > ( "timestamp" );
     auto description = this->event_args_.get< string > ( "description" );
     auto snapshot_path = this->event_args_.get< string > ( "snapshot_path" );
@@ -372,10 +379,13 @@ uploader::upload_event ()
     struct curl_httppost* formpost_ = NULL;
     struct curl_httppost* lastptr_ = NULL;
     
-    curl_formadd ( &formpost_, &lastptr_,
-                   CURLFORM_COPYNAME, "attachment",
-                   CURLFORM_FILE, snapshot_path.c_str(),
-                   CURLFORM_END );
+    if ( type.compare ( "vca" ) == 0)
+    {
+        curl_formadd ( &formpost_, &lastptr_,
+                    CURLFORM_COPYNAME, "attachment",
+                    CURLFORM_FILE, snapshot_path.c_str(),
+                    CURLFORM_END );
+    }
 
     curl_formadd ( &formpost_, &lastptr_,
                    CURLFORM_COPYNAME, "event",
@@ -396,8 +406,13 @@ uploader::upload_event ()
                    CURLFORM_COPYCONTENTS, timestamp.c_str(),
                    CURLFORM_END );
 
-    curl_easy_setopt ( this->curl_, CURLOPT_URL,
-                       global::config()->get ( "upload.url", "missing" ).c_str() );
+    string upload_url;
+    if ( type.compare ( "vca" ) == 0)
+        upload_url = global::config()->get ( "upload.url", "missing" );
+    else if ( type.compare ( "status" ) == 0 )
+        upload_url = global::config()->get ( "report.url", "missing" );
+    
+    curl_easy_setopt ( this->curl_, CURLOPT_URL, upload_url.c_str() );
 
     curl_easy_setopt ( this->curl_, CURLOPT_HEADER, 0L );
 
@@ -410,13 +425,13 @@ uploader::upload_event ()
 
     if ( curl_error_ != CURLE_OK || !uploaded_ )
     {
-        auto evt = Q_NEW ( gevt, EVT_VCA_EVENT_UPLOAD_FAILED );
+        auto evt = Q_NEW ( gevt, EVT_EVENT_UPLOAD_FAILED );
         this->postFIFO ( evt );
     }
     
     if (uploaded_)
     {
-        auto evt = Q_NEW ( gevt, EVT_VCA_EVENT_UPLOADED );
+        auto evt = Q_NEW ( gevt, EVT_EVENT_UPLOADED );
         this->postFIFO ( evt );
     }
     

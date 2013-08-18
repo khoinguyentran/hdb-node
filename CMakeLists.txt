@@ -74,4 +74,9 @@ set(jsoncpp_LIBRARIES json_linux-gcc-4.8_libmt)
 # pstream
 set(pstream_INCLUDE_DIR ${LIBREPO}/pstreams-0.8.0)
 
+# thrift
+set(thrift_INCLUDE_DIR ${LIBREPO}/thrift-0.8.0/lib/cpp/src)
+set(thrift_LIBRARY_DIR ${LIBREPO}/thrift-0.8.0/lib/cpp/.libs)
+set(thrift_LIBRARIES thrift)
+
 add_subdirectory(src)
