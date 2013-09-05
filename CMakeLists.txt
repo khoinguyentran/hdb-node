@@ -36,12 +36,12 @@ set(qpport_LIBRARIES qp)
 set(qpcpp_INCLUDE_DIR ${qpcpp_ROOT_DIR}/include)
 
 # Boost
-set(BOOST_ROOT ${LIBREPO}/boost_1_54_0)
+set(BOOST_ROOT ${LIBREPO}/boost_1_53_0)
 set(Boost_NO_SYSTEM_PATHS ON)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
-find_package(Boost 1.54.0 COMPONENTS date_time regex system thread filesystem REQUIRED)
+find_package(Boost 1.53.0 COMPONENTS date_time regex system thread filesystem REQUIRED)
 
 # cURL
 set(cURL_INCLUDE_DIR ${LIBREPO}/curl-7.31.0/include)

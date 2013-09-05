@@ -1,7 +1,10 @@
 #include "common.hpp"
 
 #include <boost/foreach.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/lock_guard.hpp>
 
 #include <iostream>
 #include <queue>
@@ -10,11 +13,15 @@
 namespace common
 {
 using boost::make_shared;
+using boost::shared_ptr;
 using boost::posix_time::microsec_clock;
 using boost::posix_time::second_clock;
-using boost::posix_time::time_facet;    
+using boost::posix_time::time_facet;
+using boost::posix_time::time_input_facet;
 using std::cout;
 using std::endl;
+using std::istringstream;
+using std::stringstream;
 using std::ostringstream;
 using std::queue;
 
@@ -106,11 +113,54 @@ void load_config(shared_ptr< ptree > config,
 
 string get_utc_string(ptime const& the_time)
 {
-    auto facet = new time_facet("%Y-%m-%d %H:%M:%S.%f");    
+    auto facet = new time_facet("%Y-%m-%d %H:%M:%S");
     ostringstream oss;
-    oss.imbue(std::locale(cout.getloc(), facet));
+    oss.imbue(std::locale(oss.getloc(), facet));
     oss << the_time;
-    return oss.str();
+    string str = oss.str();
+    return str;
+}
+
+string get_simple_utc_string(ptime const& the_time)
+{
+    auto facet = new time_facet ("%Y-%m-%d %H-%M-%S");
+    ostringstream oss;
+    oss.imbue(std::locale(oss.getloc(), facet));
+    oss << the_time;
+    string str = oss.str();
+    return str;
+}
+
+ptime parse_utc_string(string const& str)
+{
+    auto facet = new time_input_facet ("%Y-%m-%d %H:%M:%S");
+    ptime pt;
+    stringstream ss;
+    ss.imbue(std::locale(ss.getloc(), facet));
+    ss << str;
+    ss >> pt;
+    return pt;
+}
+
+ptime parse_simple_utc_string(string const& str)
+{
+    auto facet = new time_input_facet ("%Y-%m-%d %H-%M-%S");
+    ptime pt;
+    stringstream ss;
+    ss.imbue(std::locale(ss.getloc(), facet));
+    ss << str;
+    ss >> pt;
+    return pt;
+}
+
+string get_ddMMyyyyHHmmss_utc_string(ptime const& the_time)
+{
+    auto facet = new time_facet ("%d%m%Y%H%M%S");
+    ostringstream oss;
+    oss.imbue(std::locale(oss.getloc(), facet));
+    oss << the_time;
+    string str = oss.str();
+    return str;
 }
 
 }

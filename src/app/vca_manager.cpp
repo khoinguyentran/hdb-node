@@ -1,6 +1,9 @@
 #include "fsm.hpp"
 #include "common.hpp"
 #include "global.hpp"
+#include "analysis_manager.hpp"
+#include "device_manager.hpp"
+#include "report_manager.hpp"
 
 #include <curl/curl.h>
 #include <qp_port.h>
@@ -105,6 +108,9 @@ private:
     vector< shared_ptr< vca_info > > vca_list_;
     vector< shared_ptr< device_info > > device_list_;
     boost::thread worker_thread_;
+    boost::shared_ptr< device_manager > devmgr_;
+    boost::shared_ptr< analysis_manager > analysismgr_;
+    boost::shared_ptr< report_manager > reportmgr_;
 
 protected:
     static QP::QState initial ( vca_manager * const, QP::QEvt const * const );
@@ -126,7 +132,7 @@ QP::QState vca_manager::initial ( vca_manager * const me, QP::QEvt const * const
 {
     me->controller_ = global::get_default_controller();
     me->uploader_ = global::get_default_uploader();
-    return Q_TRAN ( &vca_manager::register_devices );
+    return Q_TRAN ( &vca_manager::active );
 }
 
 // active /
@@ -140,12 +146,27 @@ QP::QState vca_manager::active ( vca_manager * const me, QP::QEvt const * const 
     {
         LOG ( INFO ) << "VCA Manager started.";
 
-        me->populate_device_list();
-        me->populate_vca_list();
+        me->devmgr_ = make_shared< device_manager > ();
+        me->devmgr_->load( *global::config() );
+        me->devmgr_->start_all();
+
+        me->analysismgr_ = make_shared< analysis_manager > ( me->devmgr_ );
+        me->analysismgr_->load ( *global::config() );
+        me->analysismgr_->start_all();
+
+        me->reportmgr_ = make_shared< report_manager > ( me->analysismgr_ );
+        me->reportmgr_->load ( *global::config() );
+        me->reportmgr_->start_all();
+
 
         status = Q_HANDLED();
         break;
     }
+
+    case EVT_TIMEOUT:
+        me->devmgr_->stop_all();
+        status = Q_HANDLED();
+        break;
 
     default:
         status = Q_SUPER ( &QHsm::top );
@@ -185,8 +206,8 @@ QP::QState vca_manager::register_devices ( vca_manager * const me, QP::QEvt cons
     {
         case Q_ENTRY_SIG:
         {
-            me->worker_thread_ = boost::thread (
-                boost::bind ( &vca_manager::handle_register_devices, me ) );
+            //me->worker_thread_ = boost::thread (
+                //boost::bind ( &vca_manager::handle_register_devices, me ) );
 
             status = Q_HANDLED();
             break;

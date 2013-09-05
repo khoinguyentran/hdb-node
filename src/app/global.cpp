@@ -31,7 +31,7 @@ void load_config(path& global_path, path& local_path,
     common::load_config(configuration, global_path, local_path, argc, argv);
 
     configuration->add("info.os_version", OS_VERSION);
-    
+
     configuration->add("info.module_name",
                        boost::filesystem::system_complete(argv[0]).filename());
     // Get current software version.
@@ -43,11 +43,11 @@ void load_config(path& global_path, path& local_path,
     }
     else
     {
-        LOG(ERROR) << "Could not determine package version from VERSION file. Use constant in executable.";        
+        LOG(ERROR) << "Could not determine package version from VERSION file. Use constant in executable.";
         configuration->add("info.package_version", PACKAGE_VERSION);
     }
-    
-    common::print_ptree(*configuration);    
+
+    common::print_ptree(*configuration);
 }
 
 void init_libraries()
@@ -96,13 +96,13 @@ void qp_init()
 
     /* Initialize event pools */
     size_t small_pool_size = global::config()->get("qp.small_pool_size", 100);
-    
+
     small_pool = ( evt_block * )malloc ( sizeof ( evt_block ) * small_pool_size );
     QP::QF::poolInit(small_pool, small_pool_size, sizeof ( evt_block ));
 
     /* Create components */
     default_controller = app::create_controller();
-    default_uploader = app::create_uploader();    
+    default_uploader = app::create_uploader();
     default_vca_manager = app::create_vca_manager();
 
     /* Start components */
@@ -126,30 +126,47 @@ sqlite3* sql;
 void init_database()
 {
     int error;
-    
+
     LOG(INFO) << "sqlite3_libversion=" << sqlite3_libversion();
     LOG(INFO) << "sqlite3_threadsafe=" << sqlite3_threadsafe();
-    
+
     error = sqlite3_open("db.sqlite3", &sql);
     if (error)
     {
         LOG(INFO) << "Could not initialize database.";
         throw "could not initialize database";
     }
-    
+
     error = sqlite3_exec(sql,
                          "CREATE TABLE IF NOT EXISTS events \
                          (id INTEGER PRIMARY KEY, \
                          timestamp DATETIME NOT NULL, \
                          type TEXT NOT NULL, \
+                         reporter TEXT_NOT_NULL, \
+                         device TEXT_NOT_NULL, \
                          description TEXT NOT NULL, \
-                         snapshot_path TEXT, \
-                         uploaded INTEGER)",
-                         0, 0, 0);    
+                         processed INTEGER NOT NULL)",
+                         0, 0, 0);
     if (error)
     {
         LOG(INFO) << "Could not create table events.";
-        throw "could not create table events";        
+        throw "could not create table events";
+    }
+
+    error = sqlite3_exec(sql,
+                         "CREATE TABLE IF NOT EXISTS uploads \
+                         (id INTEGER PRIMARY KEY, \
+                         timestamp DATETIME NOT NULL, \
+                         type TEXT NOT NULL, \
+                         reporter TEXT_NOT_NULL, \
+                         device TEXT_NOT_NULL, \
+                         upload_file TEXT NOT NULL, \
+                         uploaded INTEGER NOT NULL)",
+                         0, 0, 0);
+    if (error)
+    {
+        LOG(INFO) << "Could not create table events.";
+        throw "could not create table events";
     }
 }
 

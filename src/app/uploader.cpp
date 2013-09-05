@@ -1,3 +1,4 @@
+#include "common.hpp"
 #include "fsm.hpp"
 #include "global.hpp"
 
@@ -7,25 +8,31 @@
 #include <json/json.h>
 #include <sqlite3.h>
 
+#include <boost/foreach.hpp>
 #include <boost/regex.hpp>
 #include <boost/thread.hpp>
 
+#include <algorithm>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace app
 {
 
+using namespace boost::filesystem;
+using namespace boost::posix_time;
 using boost::regex_search;
 using boost::smatch;
 using std::ostringstream;
 using std::string;
+using std::vector;
 
 class uploader : public QP::QActive
 {
 private:
-    QP::QTimeEvt timeout_;    
-    QP::QTimeEvt event_upload_reminder_;    
+    QP::QTimeEvt timeout_;
+    QP::QTimeEvt event_upload_reminder_;
     QP::QActive* controller_;
     QP::QActive* vca_manager_;
 
@@ -113,21 +120,21 @@ QP::QState uploader::idle ( uploader* const me, QP::QEvt const* const e )
     case Q_ENTRY_SIG:
     {
         auto remind_interval = SECONDS (
-            global::config()->get ( "upload.remind_interval", 1 ) );           
+            global::config()->get ( "upload.remind_interval", 1 ) );
         me->event_upload_reminder_.postEvery ( me, remind_interval );
         status = Q_HANDLED();
         break;
     }
-    
+
     case EVT_EVENT_UPLOAD_REMINDER:
     {
         // Check if there are yet-to-be-uploaded events in the database.
         auto sql = global::get_database_handle();
         sqlite3_stmt* stmt;
-        
-        char const * query = "SELECT * FROM events WHERE uploaded=0";
+
+        char const * query = "SELECT * FROM uploads WHERE uploaded=0";
         sqlite3_prepare_v2(sql, query, strlen(query) + 1, &stmt, NULL );
-        
+
         int retval = sqlite3_step(stmt);
         if (retval == SQLITE_ROW)
         {
@@ -145,22 +152,26 @@ QP::QState uploader::idle ( uploader* const me, QP::QEvt const* const e )
                 string(reinterpret_cast<const char *> (sqlite3_column_text(stmt, 2)))
             );
             evt->args.put(
-                "description",
+                "reporter",
                 string(reinterpret_cast<const char *> (sqlite3_column_text(stmt, 3)))
             );
             evt->args.put(
-                "snapshot_path",
+                "device",
                 string(reinterpret_cast<const char *> (sqlite3_column_text(stmt, 4)))
             );
-            
-            me->postFIFO(evt);            
+            evt->args.put(
+                "upload_file",
+                string(reinterpret_cast<const char *> (sqlite3_column_text(stmt, 5)))
+            );
+
+            me->postFIFO(evt);
         }
-        
+
         sqlite3_finalize(stmt);
-        
+
         status = Q_HANDLED();
         break;
-    }    
+    }
 
     case EVT_UPLOAD_EVENT:
     {
@@ -169,16 +180,16 @@ QP::QState uploader::idle ( uploader* const me, QP::QEvt const* const e )
                      << evt->args.get< string > ( "id" ) << ": "
                      << evt->args.get< string > ( "timestamp" ) << ": "
                      << evt->args.get< string > ( "type" ) << ": "
-                     << evt->args.get< string > ( "description" ) << ": "
-                     << evt->args.get< string > ( "snapshot_path" );
+                     << evt->args.get< string > ( "reporter" ) << ": "
+                     << evt->args.get< string > ( "device" );
 
         me->event_args_.clear();
         me->event_args_ = evt->args;
         status = Q_TRAN ( &uploader::uploading_event );
         break;
     }
-    
-    case Q_EXIT_SIG:        
+
+    case Q_EXIT_SIG:
         me->event_upload_reminder_.disarm();
         status = Q_HANDLED();
         break;
@@ -202,24 +213,24 @@ QP::QState uploader::uploading_event ( uploader* const me, QP::QEvt const* const
     {
         me->worker_thread_ = boost::thread (
             boost::bind ( &uploader::login, me ) );
-        
+
         status = Q_HANDLED();
         break;
     }
-    
+
     case EVT_LOGGED_IN:
         me->worker_thread_ = boost::thread (
             boost::bind ( &uploader::upload_event , me ) );
 
         status = Q_HANDLED();
         break;
-                
+
     case EVT_LOGIN_FAILED:
         status = Q_TRAN ( &uploader::idle );
         break;
 
     case EVT_EVENT_UPLOAD_FAILED:
-    {        
+    {
         status = Q_TRAN ( &uploader::idle );
         break;
     }
@@ -230,15 +241,19 @@ QP::QState uploader::uploading_event ( uploader* const me, QP::QEvt const* const
         auto sql = global::get_database_handle();
         ostringstream stmt;
         int error;
-        stmt << "UPDATE events set uploaded=1 where id="
-        << "'" << me->event_args_.get< string > ( "id" ) << "'";
-                
+
+        string id = me->event_args_.get< string > ( "id" );
+        string type = me->event_args_.get< string > ( "type" );
+
+        stmt << "UPDATE uploads set uploaded=1 where id=" << id;
+
         error = sqlite3_exec(sql, stmt.str().c_str(), 0, 0, 0);
         if (error)
         {
-            LOG(INFO) << "Could not update event status in database.";
+            LOG(INFO) << "Could not update upload status in database.";
         }
-        
+
+
         status = Q_TRAN ( &uploader::idle );
         break;
     }
@@ -269,9 +284,9 @@ uploader::login_callback ( void* ptr, size_t size, size_t nmemb, void* userdata 
 
         if ( regex_search ( start, end, what, e, flags ) )
         {
-            LOG ( INFO ) << "Session = " << what[1];            
+            LOG ( INFO ) << "Session = " << what[1];
             me->logged_in_ = true;
-            me->reply_finished_ = true;            
+            me->reply_finished_ = true;
         }
     }
 
@@ -310,7 +325,7 @@ uploader::login()
         auto evt = Q_NEW ( gevt, EVT_LOGIN_FAILED );
         this->postFIFO ( evt );
     }
-    
+
     if ( logged_in_ )
     {
         auto evt = Q_NEW ( gevt, EVT_LOGGED_IN );
@@ -367,39 +382,47 @@ uploader::upload_event ()
     uploaded_ = false;
     this->clear_reply();
     auto type = this->event_args_.get< string > ( "type" );
+    auto reporter  = this->event_args_.get< string > ( "reporter" );
     auto timestamp = this->event_args_.get< string > ( "timestamp" );
-    auto description = this->event_args_.get< string > ( "description" );
-    auto snapshot_path = this->event_args_.get< string > ( "snapshot_path" );
+    auto device = this->event_args_.get< string > ( "device" );
     auto site = global::config()->get("node.site", "invalid-site");
     auto node_name = global::config()->get("node.name", "invalid-node-name");
-
-    LOG ( INFO ) << "Uploading event " << description;
+    auto file_path = this->event_args_.get< string > ( "upload_file" );
 
     CURLcode curl_error_;
     struct curl_httppost* formpost_ = NULL;
     struct curl_httppost* lastptr_ = NULL;
-    
-    if ( type.compare ( "vca" ) == 0)
+
+    if ( type.compare ( "loitering" ) == 0 )
     {
         curl_formadd ( &formpost_, &lastptr_,
                     CURLFORM_COPYNAME, "attachment",
-                    CURLFORM_FILE, snapshot_path.c_str(),
+                    CURLFORM_FILE, file_path.c_str(),
+                    CURLFORM_END );
+    }
+    else if ( type.compare ( "health" ) == 0 )
+    {
+        curl_formadd ( &formpost_, &lastptr_,
+                    CURLFORM_COPYNAME, "status",
+                    CURLFORM_COPYCONTENTS, file_path.c_str(),
                     CURLFORM_END );
     }
 
     curl_formadd ( &formpost_, &lastptr_,
-                   CURLFORM_COPYNAME, "event",
-                   CURLFORM_COPYCONTENTS, description.c_str(),
+                   CURLFORM_COPYNAME, "type",
+                   CURLFORM_COPYCONTENTS, type.c_str(),
                    CURLFORM_END );
-    
     curl_formadd ( &formpost_, &lastptr_,
                    CURLFORM_COPYNAME, "site",
                    CURLFORM_COPYCONTENTS, site.c_str(),
                    CURLFORM_END );
-                   
     curl_formadd ( &formpost_, &lastptr_,
                     CURLFORM_COPYNAME, "nodeName",
                     CURLFORM_COPYCONTENTS, node_name.c_str(),
+                    CURLFORM_END );
+    curl_formadd ( &formpost_, &lastptr_,
+                    CURLFORM_COPYNAME, "device",
+                    CURLFORM_COPYCONTENTS, device.c_str(),
                     CURLFORM_END );
     curl_formadd ( &formpost_, &lastptr_,
                    CURLFORM_COPYNAME, "timestamp",
@@ -407,15 +430,13 @@ uploader::upload_event ()
                    CURLFORM_END );
 
     string upload_url;
-    if ( type.compare ( "vca" ) == 0)
+    if ( type.compare ( "loitering" ) == 0)
         upload_url = global::config()->get ( "upload.url", "missing" );
-    else if ( type.compare ( "status" ) == 0 )
+    else if ( type.compare ( "health" ) == 0 )
         upload_url = global::config()->get ( "report.url", "missing" );
-    
+
     curl_easy_setopt ( this->curl_, CURLOPT_URL, upload_url.c_str() );
-
     curl_easy_setopt ( this->curl_, CURLOPT_HEADER, 0L );
-
     curl_easy_setopt ( this->curl_, CURLOPT_WRITEFUNCTION, upload_event_callback );
     curl_easy_setopt ( this->curl_, CURLOPT_WRITEDATA, this );
     curl_easy_setopt ( this->curl_, CURLOPT_POST, 1L );
@@ -425,16 +446,17 @@ uploader::upload_event ()
 
     if ( curl_error_ != CURLE_OK || !uploaded_ )
     {
+        LOG ( INFO ) << curl_easy_strerror ( curl_error_ );
         auto evt = Q_NEW ( gevt, EVT_EVENT_UPLOAD_FAILED );
         this->postFIFO ( evt );
     }
-    
+
     if (uploaded_)
     {
         auto evt = Q_NEW ( gevt, EVT_EVENT_UPLOADED );
         this->postFIFO ( evt );
     }
-    
+
     curl_formfree ( formpost_ );
 }
 

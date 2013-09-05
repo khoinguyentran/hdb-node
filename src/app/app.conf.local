@@ -10,41 +10,62 @@ url=http://localhost:9001/violation/report
 url=http://localhost:9001/health/report
 
 [device-back-office]
+type=IP Camera
 model=Amtk IP Camera
-host=10.10.201.155
+host=10.10.201.241
 port=80
 username=admin
 password=
+online_check_interval=60
 location=Singapore
 latitude=0.0
 longitude=0.0
 
 [device-front-door]
+type=IP Camera
 model=Amtk IP Camera
 port=80
 username=admin
 password=
 location=Singapore
+online_check_interval=60
 latitude=0.0
 longitude=0.0
-host=10.10.201.241
+host=10.10.201.155
 
-[vca-back-office-loitering]
-analysis=loitering
-device=device-back-office
-params=-resize 320,240 -mask fg=0.2,img=vca/LOITERING1231-mask.jpg,t=5 -t -thmax 1 -phi 5 -R 5 -ppopsigma 5 -ppopthresh 0 -ppopksize 5 -ppopopen 3 -ppopotsu 1
-httpport=4001
+[device-dummy]
+type=IP Camera
+model=Amtk IP Camera
+port=80
+username=admin
+password=
+online_check_interval=60
+location=Singapore
+latitude=0.0
+longitude=0.0
+host=10.10.201.21
 
-[vca-front-door-colorfulness]
-analysis=colorfulness
-device=device-front-door
-params=-cf -nomotiondetection
-httpport=4002
+[analysis-loitering]
+type=loitering
+camera=device-back-office
+cmd=vca/vca
+cmd_args=-resize 320,240 -mask fg=0.2,img=vca/LOITERING1231-mask.jpg,t=5 -t -thmax 1 -phi 5 -R 5 -ppopsigma 5 -ppopthresh 0 -ppopksize 5 -ppopopen 3 -ppopotsu 1
+confirm_duration=30
+snapshot_interval=10
+snapshot_lifetime=120
+small_clip_resolution=320 240
+
+[report-ubi33-illegal-parking]
+type=illegal-parking
+loiter=analysis-loitering
+pre_event_period=120
+post_event_period=120
+clip_length=900
 
 [core]
-device_management_host=192.168.0.100
-stream_controller_host=192.168.0.100
+device_management_host=10.10.202.119
+stream_controller_host=10.10.202.119
 
 [node]
-name=front-door-1
-site=basement-1
+name=Sales Area
+site=KAISquare Office

@@ -37,10 +37,11 @@ add_definitions(-DBOOST_NO_CXX11_SCOPED_ENUMS)
 
 add_executable(controller ${CONTROLLER_SRCS})
 target_link_libraries(controller
-    pthread rt
+    pthread
     ${Boost_LIBRARIES} ${cURL_LIBRARIES}
     ${sqlite_LIBRARIES} ${glog_LIBRARIES} ${openssl_LIBRARIES}
-    ${jsoncpp_LIBRARIES} ${qpport_LIBRARIES})
+    ${jsoncpp_LIBRARIES} ${qpport_LIBRARIES}
+    rt)
     
 add_custom_command(TARGET controller POST_BUILD
     COMMAND bash ${CMAKE_SOURCE_DIR}/script/cpld.sh

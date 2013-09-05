@@ -32,6 +32,8 @@ add_definitions(-DHAVE_NETINET_IN_H)
 add_definitions(-DHAVE_INTTYPES_H)
 
 set(APP_SRCS main.cpp global.cpp bsp.cpp ../common/common.cpp
+    ip_camera.cpp device_manager.cpp analysis_manager.cpp
+    loitering.cpp report_illegal_parking.cpp report_manager.cpp
     controller.cpp uploader.cpp vca_manager.cpp)
 
 add_definitions(-std=c++11)
@@ -42,9 +44,10 @@ add_definitions(-DBOOST_NO_CXX11_SCOPED_ENUMS)
 
 add_executable(app ${APP_SRCS})
 target_link_libraries(app corecomm
-    pthread rt
+    pthread
     ${Boost_LIBRARIES} ${glog_LIBRARIES} ${cURL_LIBRARIES}
-    ${sqlite_LIBRARIES} ${jsoncpp_LIBRARIES} ${qpport_LIBRARIES})
+    ${sqlite_LIBRARIES} ${jsoncpp_LIBRARIES} ${qpport_LIBRARIES}
+    rt)
 
 add_custom_command(TARGET app POST_BUILD
     COMMAND bash ${CMAKE_SOURCE_DIR}/script/cpld.sh

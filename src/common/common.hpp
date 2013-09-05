@@ -22,6 +22,10 @@ void print_ptree(ptree const &);
 ptree merge_ptree(ptree const &, ptree const &);
 void load_config(shared_ptr< ptree >, path&, path&, int, char* []);
 string get_utc_string(ptime const &);
+ptime parse_utc_string(string const &);
+string get_simple_utc_string(ptime const &);
+ptime parse_simple_utc_string(string const &);
+string get_ddMMyyyyHHmmss_utc_string(ptime const &);
 }
 
 #endif
