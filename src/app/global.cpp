@@ -5,17 +5,23 @@
 
 #include <glog/logging.h>
 #include <curl/curl.h>
+#include <pstream.h>
 
+#include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 
 #include <fstream>
+#include <sstream>
+#include <vector>
 
 namespace global
 {
 using boost::make_shared;
 using std::ifstream;
+using std::ostringstream;
+using std::vector;
 
 shared_ptr< ptree > configuration = make_shared< ptree >();
 
@@ -34,6 +40,7 @@ void load_config(path& global_path, path& local_path,
 
     configuration->add("info.module_name",
                        boost::filesystem::system_complete(argv[0]).filename());
+
     // Get current software version.
     ifstream version_file("../VERSION");
     string version;
@@ -46,6 +53,24 @@ void load_config(path& global_path, path& local_path,
         LOG(ERROR) << "Could not determine package version from VERSION file. Use constant in executable.";
         configuration->add("info.package_version", PACKAGE_VERSION);
     }
+
+    // Get IP addresses of all interfaces.
+#ifdef __FreeBSD__
+    string ipcmd ( "ifconfig | grep inet | awk '{ print $2 }' | awk '{ print $1 }'" );
+#else
+    string ipcmd ( "ifconfig | grep inet | awk -F: '{ print $2 }' | awk '{ print $1 }'" );
+#endif
+
+    redi::ipstream in ( ipcmd );
+    string line;
+    ostringstream ips;
+
+    while ( std::getline ( in, line ) )
+    {
+        if ( !line.empty() )
+            ips << line << " ";
+    }
+    configuration->add ( "info.ip_list", ips.str() );
 
     common::print_ptree(*configuration);
 }

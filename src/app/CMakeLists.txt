@@ -17,6 +17,7 @@ include_directories(${qpport_INCLUDE_DIR})
 link_directories(${qpport_LIBRARY_DIR})
 include_directories(${pstream_INCLUDE_DIR})
 include_directories(${thrift_INCLUDE_DIR})
+link_directories(${thrift_LIBRARY_DIR})
 
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/version.hpp.in

@@ -25,44 +25,42 @@ using boost::posix_time::ptime;
 using boost::posix_time::microsec_clock;
 using std::ostringstream;
 using std::string;
-    
+
 class controller : public QP::QActive
 {
 private:
     QP::QTimeEvt timeout_;
-    QP::QTimeEvt status_report_reminder_;
     QP::QActive* uploader_;
-    QP::QActive* vca_manager_;    
-    
+    QP::QActive* vca_manager_;
+
 public:
     controller();
     void listen_for_command();
     void process_command(string const &);
     void run_io_service();
-    
+
 private:
     asio::io_service io_service_;
     boost::thread io_service_thread_;
-    boost::thread command_listener_thread_;    
+    boost::thread command_listener_thread_;
     tcp::socket controll_socket_;
-    
+
 protected:
     static QP::QState initial(controller * const, QP::QEvt const * const);
-    static QP::QState active(controller * const, QP::QEvt const * const);    
+    static QP::QState active(controller * const, QP::QEvt const * const);
 };
 
 // Constructor.
 controller::controller()
     : QActive(Q_STATE_CAST(&controller::initial)),
-      timeout_(EVT_TIMEOUT), controll_socket_(io_service_),
-      status_report_reminder_(EVT_REPORT_STATUS)
+      timeout_(EVT_TIMEOUT), controll_socket_(io_service_)
 {
 }
 
 // initial
 QP::QState controller::initial(controller * const me, QP::QEvt const * const e)
 {
-    me->uploader_ = global::get_default_uploader();    
+    me->uploader_ = global::get_default_uploader();
     me->vca_manager_ = global::get_default_vca_manager();
     return Q_TRAN(&controller::active);
 }
@@ -71,7 +69,7 @@ QP::QState controller::initial(controller * const me, QP::QEvt const * const e)
 QP::QState controller::active(controller * const me, QP::QEvt const * const e)
 {
     QP::QState status;
-    
+
     switch (e->sig)
     {
     case Q_ENTRY_SIG:
@@ -86,47 +84,20 @@ QP::QState controller::active(controller * const me, QP::QEvt const * const e)
         status = Q_HANDLED();
         break;
     }
-    case EVT_POWERED_ON:     
+    case EVT_POWERED_ON:
     {
-        auto remind_interval = SECONDS (
-            global::config()->get ( "report.remind_interval", 5 ) );
-        me->status_report_reminder_.postEvery ( me, remind_interval );      
-        
         status = Q_HANDLED();
         break;
     }
-    case EVT_SHUTDOWN:        
+    case EVT_SHUTDOWN:
         std::terminate();
         status = Q_HANDLED();
         break;
-    case EVT_REPORT_STATUS:
-    {
-        auto sql = global::get_database_handle();
-        int error;
-        
-        ostringstream stmt;
-        ptime timestamp ( microsec_clock::universal_time() );
-        
-        stmt << "INSERT INTO events VALUES(NULL, "
-        << "'" << common::get_utc_string ( timestamp ) << "'" << ","
-        << "'" << "status" << "'" << ","
-        << "'" << "alive" << "'" << ", "
-        << "'" << "" << "'" << ", "
-        << "0" << ")";
-        
-        error = sqlite3_exec ( sql, stmt.str().c_str(), 0, 0, 0 );
-        if ( error )
-        {
-            LOG ( ERROR ) << "Could not register new event with database.";
-        }
-        status = Q_HANDLED();
-        break;
-    }
     default:
         status = Q_SUPER(&QHsm::top);
         break;
     }
-    
+
     return status;
 }
 
@@ -134,7 +105,7 @@ void
 controller::process_command(string const& cmd)
 {
     if (cmd.find("shutdown") == 0)
-    {        
+    {
         string reply("done\n");
         asio::write(controll_socket_, asio::buffer(reply));
         auto evt = Q_NEW(gevt, EVT_SHUTDOWN);
@@ -152,22 +123,22 @@ controller::listen_for_command()
     LOG(INFO) << "Listening for commands...";
     boost::system::error_code error;
     asio::streambuf buffer;
-        
+
     try
-    {   
+    {
         uint16_t port = global::config()->get("controller.port", 3103);
         tcp::acceptor acceptor(this->io_service_,
-                               tcp::endpoint(tcp::v4(), port));   
-        
+                               tcp::endpoint(tcp::v4(), port));
+
         while (true)
-        {   
+        {
             acceptor.accept(controll_socket_);
             while (true)
             {
                 asio::read_until(controll_socket_, buffer, regex("\n"), error);
                 if (error)
                     break;
-                
+
                 std::istream is(&buffer);
                 string line;
                 std::getline(is, line);
@@ -179,7 +150,6 @@ controller::listen_for_command()
     catch (std::exception& e)
     {
         LOG(ERROR) << e.what();
-        
     }
 }
 

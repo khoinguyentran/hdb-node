@@ -9,6 +9,7 @@
 #include <protocol/TBinaryProtocol.h>
 #include <glog/logging.h>
 
+#include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
 #include <boost/foreach.hpp>
 #include <boost/shared_ptr.hpp>
@@ -282,7 +283,16 @@ ip_camera::get_stream_url ( string const& stream_type = "http/mjpeg" )
     transport->open();
 
     vector< string > urls;
-    vector< string > clients { "localhost", "127.0.0.1" };
+
+    vector< string > clients;
+    vector< string > iplist;
+    string ipliststr = global::config()->get< string > ( "info.ip_list" );
+    boost::split ( iplist, ipliststr, boost::is_any_of ( " " ), boost::token_compress_on );
+    BOOST_FOREACH ( auto const& s, iplist )
+    {
+        if ( !s.empty() )
+            clients.push_back ( s );
+    }
 
     string session_id = device_id;
 
@@ -358,7 +368,15 @@ ip_camera::list_video_urls_between ( ptime const& start, ptime const& end)
     transport->open();
 
     vector< string > urls;
-    vector< string > clients { "localhost", "127.0.0.1", "10.10.200.162" };
+    vector< string > clients;
+    vector< string > iplist;
+    string ipliststr = global::config()->get< string > ( "info.ip_list" );
+    boost::split ( iplist, ipliststr, boost::is_any_of ( " " ), boost::token_compress_on );
+    BOOST_FOREACH ( auto const& s, iplist )
+    {
+        if ( !s.empty() )
+            clients.push_back ( s );
+    }
 
     string session_id = device_id + "1";
 
