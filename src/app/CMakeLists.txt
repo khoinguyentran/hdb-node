@@ -50,18 +50,32 @@ target_link_libraries(app corecomm
     ${sqlite_LIBRARIES} ${jsoncpp_LIBRARIES} ${qpport_LIBRARIES}
     rt)
 
+set(PACKAGE_INSTALL_DIR
+    ${CMAKE_INSTALL_PREFIX}/${OS_VERSION}/app/${PACKAGE_VERSION})
+set(PACKAGE_SCRIPT
+    ${CMAKE_SOURCE_DIR}/script/prepare-package.sh)
+set(PACKAGE_CODE "execute_process(COMMAND "
+    "${PACKAGE_SCRIPT} "
+    "node "
+    "${PACKAGE_VERSION} "
+    "${OS_VERSION} "
+    "${PACKAGE_INSTALL_DIR} ) ")
+
 add_custom_command(TARGET app POST_BUILD
     COMMAND bash ${CMAKE_SOURCE_DIR}/script/cpld.sh
         ${CMAKE_CURRENT_BINARY_DIR}/app
-        ${CMAKE_INSTALL_PREFIX}/${PACKAGE_VERSION}/${OS_VERSION}/app)
+        ${PACKAGE_INSTALL_DIR})
 
 install(TARGETS app
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/app)
+        DESTINATION ${OS_VERSION}/app/${PACKAGE_VERSION})
 install(FILES app.conf app.conf.local
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/app)
+        DESTINATION ${OS_VERSION}/app/${PACKAGE_VERSION})
 install(DIRECTORY snapshots
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/app)
+        DESTINATION ${OS_VERSION}/app/${PACKAGE_VERSION})
+install(PROGRAMS service/run
+        DESTINATION ${OS_VERSION}/app/${PACKAGE_VERSION}/service)
 install(DIRECTORY bin/${OS_VERSION}/vca
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/app)
+        DESTINATION ${OS_VERSION}/app/${PACKAGE_VERSION})
 install(PROGRAMS bin/${OS_VERSION}/vca/vca
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/app/vca)
+        DESTINATION ${OS_VERSION}/app/${PACKAGE_VERSION}/vca)
+install(CODE "${PACKAGE_CODE}")

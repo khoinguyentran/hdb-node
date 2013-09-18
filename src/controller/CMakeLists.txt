@@ -24,11 +24,11 @@ configure_file(
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/VERSION.in
     ${CMAKE_CURRENT_BINARY_DIR}/VERSION)
-    
+
 set(CONTROLLER_SRCS main.cpp
     ../common/common.cpp global.cpp bsp.cpp
     controller.cpp downloader.cpp)
-    
+
 add_definitions(-std=c++11)
 add_definitions(-DQ_EVT_CTOR)
 add_definitions(-DQ_EVT_VIRTUAL)
@@ -42,23 +42,31 @@ target_link_libraries(controller
     ${sqlite_LIBRARIES} ${glog_LIBRARIES} ${openssl_LIBRARIES}
     ${jsoncpp_LIBRARIES} ${qpport_LIBRARIES}
     rt)
-    
+
+set(PACKAGE_INSTALL_DIR
+    ${CMAKE_INSTALL_PREFIX}/${OS_VERSION}/controller/${PACKAGE_VERSION})
+set(PACKAGE_SCRIPT
+    ${CMAKE_SOURCE_DIR}/script/prepare-package.sh)
+set(PACKAGE_CODE "execute_process(COMMAND "
+    "${PACKAGE_SCRIPT} "
+    "controller "
+    "${PACKAGE_VERSION} "
+    "${OS_VERSION} "
+    "${PACKAGE_INSTALL_DIR} ) ")
+
 add_custom_command(TARGET controller POST_BUILD
     COMMAND bash ${CMAKE_SOURCE_DIR}/script/cpld.sh
         ${CMAKE_CURRENT_BINARY_DIR}/controller
-        ${CMAKE_INSTALL_PREFIX}/${PACKAGE_VERSION}/${OS_VERSION})
+        ${PACKAGE_INSTALL_DIR})
 
 install(TARGETS controller
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION})
+        DESTINATION ${OS_VERSION}/controller/${PACKAGE_VERSION})
 install(DIRECTORY assets data
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION})
-install(PROGRAMS service/controller/run
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/service/controller)
-install(PROGRAMS service/app/run
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION}/service/app)
+        DESTINATION ${OS_VERSION}/controller/${PACKAGE_VERSION})
+install(PROGRAMS service/run
+        DESTINATION ${OS_VERSION}/controller/${PACKAGE_VERSION}/service)
 install(FILES controller.conf controller.conf.local
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION})
+        DESTINATION ${OS_VERSION}/controller/${PACKAGE_VERSION})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/VERSION
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION})
-install(PROGRAMS pre-update.sh post-update.sh        
-        DESTINATION ${PACKAGE_VERSION}/${OS_VERSION})
+        DESTINATION ${OS_VERSION}/controller/${PACKAGE_VERSION})
+install(CODE "${PACKAGE_CODE}")
