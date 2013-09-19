@@ -43,30 +43,27 @@ target_link_libraries(controller
     ${jsoncpp_LIBRARIES} ${qpport_LIBRARIES}
     rt)
 
-set(PACKAGE_INSTALL_DIR
-    ${CMAKE_INSTALL_PREFIX}/${OS_VERSION}/controller/${PACKAGE_VERSION})
-set(PACKAGE_SCRIPT
-    ${CMAKE_SOURCE_DIR}/script/prepare-package.sh)
+set(PACKAGE_RELATIVE_DIR packages/${OS_VERSION}/controller/${PACKAGE_VERSION})
+set(PACKAGE_DIR ${CMAKE_INSTALL_PREFIX}/${PACKAGE_RELATIVE_DIR})
+set(PACKAGE_SCRIPT ${CMAKE_SOURCE_DIR}/script/prepare-package.sh)
 set(PACKAGE_CODE "execute_process(COMMAND "
     "${PACKAGE_SCRIPT} "
+    "${CMAKE_INSTALL_PREFIX}"
     "controller "
     "${PACKAGE_VERSION} "
     "${OS_VERSION} "
-    "${PACKAGE_INSTALL_DIR} ) ")
+    "${PACKAGE_DIR} ) ")
 
 add_custom_command(TARGET controller POST_BUILD
     COMMAND bash ${CMAKE_SOURCE_DIR}/script/cpld.sh
         ${CMAKE_CURRENT_BINARY_DIR}/controller
-        ${PACKAGE_INSTALL_DIR})
+        ${PACKAGE_DIR})
 
-install(TARGETS controller
-        DESTINATION ${OS_VERSION}/controller/${PACKAGE_VERSION})
-install(DIRECTORY assets data
-        DESTINATION ${OS_VERSION}/controller/${PACKAGE_VERSION})
-install(PROGRAMS service/run
-        DESTINATION ${OS_VERSION}/controller/${PACKAGE_VERSION}/service)
+install(TARGETS controller DESTINATION ${PACKAGE_RELATIVE_DIR})
+install(DIRECTORY assets data DESTINATION ${PACKAGE_RELATIVE_DIR})
+install(PROGRAMS service/run DESTINATION ${PACKAGE_RELATIVE_DIR}/service)
 install(FILES controller.conf controller.conf.local
-        DESTINATION ${OS_VERSION}/controller/${PACKAGE_VERSION})
+        DESTINATION ${PACKAGE_RELATIVE_DIR})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/VERSION
-        DESTINATION ${OS_VERSION}/controller/${PACKAGE_VERSION})
+        DESTINATION ${PACKAGE_RELATIVE_DIR})
 install(CODE "${PACKAGE_CODE}")
